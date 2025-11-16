@@ -277,7 +277,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              PodcastAI
+              KT
             </h1>
             <Button
               variant="ghost"
@@ -306,10 +306,10 @@ const Index = () => {
               <span className="text-sm text-primary font-medium">AI-Powered Podcast Generation</span>
             </div>
             <h2 className="text-5xl md:text-6xl font-bold text-foreground mb-6">
-              Create Amazing Podcasts
+              Create Training, onboarding, session
               <br />
               <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                In Seconds
+                for your company
               </span>
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
