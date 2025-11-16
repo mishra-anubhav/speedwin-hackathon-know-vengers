@@ -19,6 +19,14 @@ export const PodcastPlayer = ({ open, onOpenChange, podcast, onRegenerateAudio }
   if (!podcast) return null;
 
   const isStaleBlob = typeof podcast.audio_url === 'string' && podcast.audio_url.startsWith('blob:');
+  const hasValidAudio = podcast.audio_url && !isStaleBlob;
+
+  console.log('PodcastPlayer audio check:', { 
+    hasAudio: !!podcast.audio_url,
+    isStaleBlob,
+    hasValidAudio,
+    urlPrefix: podcast.audio_url?.substring(0, 50)
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,19 +55,28 @@ export const PodcastPlayer = ({ open, onOpenChange, podcast, onRegenerateAudio }
             {podcast.audio_url && (
               <div className="bg-secondary/50 p-6 rounded-lg border border-border">
                 <h3 className="font-semibold mb-4 text-foreground">Audio Player</h3>
-                {isStaleBlob && (
+                {isStaleBlob ? (
                   <div className="text-sm text-muted-foreground mb-3">
                     This audio link expired. Please regenerate the audio.
                     {onRegenerateAudio && (
                       <Button size="sm" className="ml-2" onClick={onRegenerateAudio}>Regenerate</Button>
                     )}
                   </div>
-                )}
+                ) : !hasValidAudio ? (
+                  <div className="text-sm text-muted-foreground mb-3">
+                    Audio failed to load. Please regenerate.
+                    {onRegenerateAudio && (
+                      <Button size="sm" className="ml-2" onClick={onRegenerateAudio}>Regenerate</Button>
+                    )}
+                  </div>
+                ) : null}
                 <audio 
                   controls 
                   className="w-full"
-                  src={isStaleBlob ? undefined : podcast.audio_url}
+                  src={hasValidAudio ? podcast.audio_url : undefined}
                   preload="metadata"
+                  onError={(e) => console.error('Audio element error:', e)}
+                  onLoadedMetadata={() => console.log('Audio metadata loaded successfully')}
                 >
                   Your browser does not support the audio element.
                 </audio>

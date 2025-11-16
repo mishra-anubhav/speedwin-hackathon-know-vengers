@@ -144,8 +144,19 @@ const Index = () => {
 
       if (error) throw error;
 
+      console.log('Audio generation response:', { 
+        hasAudio: !!data?.audio, 
+        audioLength: data?.audio?.length 
+      });
+
+      if (!data?.audio) {
+        throw new Error('No audio data received from server');
+      }
+
       // Store as data URL (base64) for persistence
       const audioDataUrl = `data:audio/mpeg;base64,${data.audio}`;
+      
+      console.log('Created audio data URL, length:', audioDataUrl.length);
 
       // Update podcast with audio URL
       const { error: updateError } = await supabase
