@@ -1,6 +1,7 @@
+import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Volume2, Image, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Volume2, Image, Trash2 } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -8,9 +9,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { useState, useRef } from "react";
-import type { Database } from "@/integrations/supabase/types";
 import Autoplay from "embla-carousel-autoplay";
+import type { Database } from "@/integrations/supabase/types";
 
 type Podcast = Database["public"]["Tables"]["podcasts"]["Row"];
 
@@ -29,10 +29,7 @@ export const PodcastCarousel = ({
   onGenerateAudio,
   onGenerateThumbnail,
 }: PodcastCarouselProps) => {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const autoplayPlugin = useRef(
-    Autoplay({ delay: 4000, stopOnInteraction: true })
-  );
+  const [hoveredId, setHoveredId] = React.useState<string | null>(null);
 
   return (
     <Carousel
@@ -40,7 +37,12 @@ export const PodcastCarousel = ({
         align: "start",
         loop: true,
       }}
-      plugins={[autoplayPlugin.current]}
+      plugins={[
+        Autoplay({
+          delay: 4000,
+          stopOnInteraction: true,
+        }),
+      ]}
       className="w-full"
     >
       <CarouselContent className="-ml-4">
