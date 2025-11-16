@@ -74,7 +74,7 @@ async function generateAudioChunk(text: string, voice: string, apiKey: string): 
 }
 
 // Concatenate multiple MP3 buffers
-function concatenateMP3Buffers(buffers: ArrayBuffer[]): Uint8Array {
+function concatenateMP3Buffers(buffers: ArrayBuffer[]): ArrayBuffer {
   const totalLength = buffers.reduce((acc, buf) => acc + buf.byteLength, 0);
   const result = new Uint8Array(totalLength);
   let offset = 0;
@@ -84,7 +84,7 @@ function concatenateMP3Buffers(buffers: ArrayBuffer[]): Uint8Array {
     offset += buffer.byteLength;
   }
 
-  return result;
+  return result.buffer;
 }
 
 // Safe Uint8Array -> base64 without stack overflow
@@ -134,16 +134,13 @@ serve(async (req) => {
     const combinedAudio = concatenateMP3Buffers(audioBuffers);
     console.log('Combined audio bytes:', combinedAudio.byteLength);
 
-    // Convert to base64 safely
-    const base64Audio = uint8ToBase64(combinedAudio);
-    console.log('Base64 length:', base64Audio.length);
-
-    return new Response(
-      JSON.stringify({ audioContent: base64Audio }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    // Return MP3 directly as binary
+    return new Response(combinedAudio, {
+      headers: { 
+        ...corsHeaders, 
+        'Content-Type': 'audio/mpeg'
+      },
+    });
   } catch (error) {
     console.error('Error in text-to-speech function:', error);
     return new Response(
