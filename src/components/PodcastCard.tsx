@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Trash2 } from "lucide-react";
+import { Play, Trash2, Volume2 } from "lucide-react";
 import { useState } from "react";
 
 interface PodcastCardProps {
@@ -9,8 +9,10 @@ interface PodcastCardProps {
   description?: string;
   thumbnail_url?: string;
   duration: string;
+  audio_url?: string;
   onPlay: () => void;
   onDelete: () => void;
+  onGenerateAudio: () => void;
 }
 
 export const PodcastCard = ({
@@ -18,8 +20,10 @@ export const PodcastCard = ({
   description,
   thumbnail_url,
   duration,
+  audio_url,
   onPlay,
   onDelete,
+  onGenerateAudio,
 }: PodcastCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -55,6 +59,18 @@ export const PodcastCard = ({
             >
               <Play className="w-6 h-6" />
             </Button>
+            {!audio_url && (
+              <Button
+                size="icon"
+                className="bg-accent hover:bg-accent/90 text-white rounded-full w-10 h-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerateAudio();
+                }}
+              >
+                <Volume2 className="w-5 h-5" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="destructive"

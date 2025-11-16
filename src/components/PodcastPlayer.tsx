@@ -10,6 +10,7 @@ interface PodcastPlayerProps {
     title: string;
     description?: string;
     script?: string;
+    audio_url?: string;
   } | null;
 }
 
@@ -40,6 +41,19 @@ export const PodcastPlayer = ({ open, onOpenChange, podcast }: PodcastPlayerProp
 
         <ScrollArea className="h-[500px] pr-4">
           <div className="space-y-4">
+            {podcast.audio_url && (
+              <div className="bg-secondary/50 p-6 rounded-lg border border-border">
+                <h3 className="font-semibold mb-4 text-foreground">Audio Player</h3>
+                <audio 
+                  controls 
+                  className="w-full"
+                  src={podcast.audio_url}
+                >
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+            )}
+            
             <div className="bg-secondary/50 p-6 rounded-lg border border-border">
               <h3 className="font-semibold mb-4 text-foreground">Podcast Script</h3>
               <div className="prose prose-invert max-w-none">
