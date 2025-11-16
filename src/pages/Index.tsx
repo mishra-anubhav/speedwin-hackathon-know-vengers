@@ -1,12 +1,218 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Auth } from "@/components/Auth";
+import { Button } from "@/components/ui/button";
+import { Plus, LogOut, Sparkles } from "lucide-react";
+import { PodcastCard } from "@/components/PodcastCard";
+import { GeneratePodcastDialog } from "@/components/GeneratePodcastDialog";
+import { PodcastPlayer } from "@/components/PodcastPlayer";
+import { useToast } from "@/hooks/use-toast";
+import type { Database } from "@/integrations/supabase/types";
+import heroBg from "@/assets/hero-bg.jpg";
+
+type Podcast = Database["public"]["Tables"]["podcasts"]["Row"];
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadPodcasts();
+    }
+  }, [user]);
+
+  const loadPodcasts = async () => {
+    const { data, error } = await supabase
+      .from("podcasts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error loading podcasts:", error);
+      toast({
+        title: "Error loading podcasts",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setPodcasts(data || []);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const handleDeletePodcast = async (id: string) => {
+    const { error } = await supabase.from("podcasts").delete().eq("id", id);
+
+    if (error) {
+      toast({
+        title: "Error deleting podcast",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Podcast deleted" });
+      loadPodcasts();
+    }
+  };
+
+  const handlePlayPodcast = (podcast: Podcast) => {
+    setSelectedPodcast(podcast);
+    setPlayerOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-primary text-2xl font-bold">Loading...</div>
       </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth />;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              PodcastAI
+            </h1>
+            <Button
+              variant="ghost"
+              onClick={handleSignOut}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative overflow-hidden border-b border-border/50">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroBg})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/80" />
+        
+        <div className="relative container mx-auto px-4 py-20">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm text-primary font-medium">AI-Powered Podcast Generation</span>
+            </div>
+            <h2 className="text-5xl md:text-6xl font-bold text-foreground mb-6">
+              Create Amazing Podcasts
+              <br />
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                In Seconds
+              </span>
+            </h2>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Transform your ideas into engaging podcast scripts with the power of AI.
+              Generate, customize, and share professional podcasts effortlessly.
+            </p>
+            <Button
+              size="lg"
+              onClick={() => setGenerateDialogOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-white shadow-glow h-14 px-8 text-lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Generate New Podcast
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Podcasts Grid */}
+      <section className="container mx-auto px-4 py-12">
+        <div className="flex items-center justify-between mb-8">
+          <h3 className="text-2xl font-bold text-foreground">Your Podcasts</h3>
+          <Button
+            onClick={() => setGenerateDialogOpen(true)}
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary hover:text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Podcast
+          </Button>
+        </div>
+
+        {podcasts.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="w-10 h-10 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold text-foreground mb-2">No podcasts yet</h3>
+            <p className="text-muted-foreground mb-6">
+              Create your first AI-generated podcast to get started
+            </p>
+            <Button
+              onClick={() => setGenerateDialogOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Generate Your First Podcast
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {podcasts.map((podcast) => (
+              <PodcastCard
+                key={podcast.id}
+                id={podcast.id}
+                title={podcast.title}
+                description={podcast.description || undefined}
+                thumbnail_url={podcast.thumbnail_url || undefined}
+                duration={podcast.duration}
+                onPlay={() => handlePlayPodcast(podcast)}
+                onDelete={() => handleDeletePodcast(podcast.id)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Dialogs */}
+      <GeneratePodcastDialog
+        open={generateDialogOpen}
+        onOpenChange={setGenerateDialogOpen}
+        onSuccess={loadPodcasts}
+      />
+
+      <PodcastPlayer
+        open={playerOpen}
+        onOpenChange={setPlayerOpen}
+        podcast={selectedPodcast}
+      />
     </div>
   );
 };
