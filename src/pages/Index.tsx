@@ -82,6 +82,56 @@ const Index = () => {
     setPlayerOpen(true);
   };
 
+  const handleGenerateAudio = async (podcast: Podcast) => {
+    if (!podcast.script) {
+      toast({
+        title: "No script available",
+        description: "Cannot generate audio without a script",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Generating audio...",
+      description: "This may take a moment",
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke("text-to-speech", {
+        body: { text: podcast.script, voice: "alloy" },
+      });
+
+      if (error) throw error;
+
+      // Create blob from base64 audio
+      const audioBlob = await fetch(`data:audio/mp3;base64,${data.audioContent}`).then(r => r.blob());
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Update podcast with audio URL
+      const { error: updateError } = await supabase
+        .from("podcasts")
+        .update({ audio_url: audioUrl })
+        .eq("id", podcast.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Audio generated!",
+        description: "Your podcast audio is ready to play",
+      });
+
+      loadPodcasts();
+    } catch (error) {
+      console.error("Error generating audio:", error);
+      toast({
+        title: "Audio generation failed",
+        description: error instanceof Error ? error.message : "Failed to generate audio",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -193,8 +243,10 @@ const Index = () => {
                 description={podcast.description || undefined}
                 thumbnail_url={podcast.thumbnail_url || undefined}
                 duration={podcast.duration}
+                audio_url={podcast.audio_url || undefined}
                 onPlay={() => handlePlayPodcast(podcast)}
                 onDelete={() => handleDeletePodcast(podcast.id)}
+                onGenerateAudio={() => handleGenerateAudio(podcast)}
               />
             ))}
           </div>
