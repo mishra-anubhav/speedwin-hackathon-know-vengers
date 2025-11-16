@@ -10,11 +10,13 @@ interface PodcastCardProps {
   thumbnail_url?: string;
   duration: string;
   audio_url?: string;
+  video_url?: string;
   topic: string;
   onPlay: () => void;
   onDelete: () => void;
   onGenerateAudio: () => void;
   onGenerateThumbnail: () => void;
+  onGenerateVideo: () => void;
 }
 
 export const PodcastCard = ({
@@ -23,11 +25,13 @@ export const PodcastCard = ({
   thumbnail_url,
   duration,
   audio_url,
+  video_url,
   topic,
   onPlay,
   onDelete,
   onGenerateAudio,
   onGenerateThumbnail,
+  onGenerateVideo,
 }: PodcastCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -87,6 +91,19 @@ export const PodcastCard = ({
                 title="Generate Thumbnail"
               >
                 <Image className="w-5 h-5" />
+              </Button>
+            )}
+            {!video_url && audio_url && thumbnail_url && (
+              <Button
+                size="icon"
+                className="bg-purple-600 hover:bg-purple-700 text-white rounded-full w-10 h-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerateVideo();
+                }}
+                title="Generate Video"
+              >
+                <Play className="w-5 h-5" />
               </Button>
             )}
             <Button
