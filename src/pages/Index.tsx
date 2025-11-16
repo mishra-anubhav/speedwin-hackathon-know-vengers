@@ -3,13 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Auth } from "@/components/Auth";
 import { Button } from "@/components/ui/button";
 import { Plus, LogOut, Sparkles } from "lucide-react";
-import { PodcastCarousel } from "@/components/PodcastCarousel";
+import { PodcastCard } from "@/components/PodcastCard";
 import { GeneratePodcastDialog } from "@/components/GeneratePodcastDialog";
 import { PodcastPlayer } from "@/components/PodcastPlayer";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import heroBg from "@/assets/hero-bg.jpg";
-import { generateStaticVideo } from "@/utils/videoGenerator";
 
 type Podcast = Database["public"]["Tables"]["podcasts"]["Row"];
 
@@ -145,7 +144,7 @@ const Index = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ text: podcast.script }),
+          body: JSON.stringify({ text: podcast.script, voice: "alloy" }),
         }
       );
 
@@ -168,45 +167,8 @@ const Index = () => {
 
       toast({
         title: "Audio generated!",
-        description: "Now generating video...",
+        description: "Your podcast audio is ready to play",
       });
-
-      // Generate video if thumbnail exists
-      if (podcast.thumbnail_url) {
-        try {
-          toast({
-            title: "Generating video...",
-            description: "Combining thumbnail with audio",
-          });
-
-          const videoBlob = await generateStaticVideo(
-            podcast.thumbnail_url,
-            audioBlob
-          );
-          
-          const videoUrl = URL.createObjectURL(videoBlob);
-
-          // Update podcast with video URL
-          const { error: videoUpdateError } = await supabase
-            .from("podcasts")
-            .update({ video_url: videoUrl })
-            .eq("id", podcast.id);
-
-          if (videoUpdateError) throw videoUpdateError;
-
-          toast({
-            title: "Video generated!",
-            description: "Your podcast video is ready",
-          });
-        } catch (videoError) {
-          console.error("Error generating video:", videoError);
-          toast({
-            title: "Video generation failed",
-            description: "Audio is available, but video generation encountered an error",
-            variant: "destructive",
-          });
-        }
-      }
 
       loadPodcasts();
     } catch (error) {
@@ -304,8 +266,8 @@ const Index = () => {
         </div>
 
         {podcasts.length === 0 ? (
-          <div className="text-center py-20 animate-fade-in">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+          <div className="text-center py-20">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
               <Sparkles className="w-10 h-10 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">No podcasts yet</h3>
@@ -314,20 +276,31 @@ const Index = () => {
             </p>
             <Button
               onClick={() => setGenerateDialogOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-white hover-scale"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
               Generate Your First Podcast
             </Button>
           </div>
         ) : (
-          <PodcastCarousel
-            podcasts={podcasts}
-            onPlay={handlePlayPodcast}
-            onDelete={handleDeletePodcast}
-            onGenerateAudio={handleGenerateAudio}
-            onGenerateThumbnail={handleGenerateThumbnail}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {podcasts.map((podcast) => (
+              <PodcastCard
+                key={podcast.id}
+                id={podcast.id}
+                title={podcast.title}
+                description={podcast.description || undefined}
+                thumbnail_url={podcast.thumbnail_url || undefined}
+                duration={podcast.duration}
+                audio_url={podcast.audio_url || undefined}
+                topic={podcast.topic}
+                onPlay={() => handlePlayPodcast(podcast)}
+                onDelete={() => handleDeletePodcast(podcast.id)}
+                onGenerateAudio={() => handleGenerateAudio(podcast)}
+                onGenerateThumbnail={() => handleGenerateThumbnail(podcast)}
+              />
+            ))}
+          </div>
         )}
       </section>
 
