@@ -202,13 +202,17 @@ serve(async (req) => {
     const combinedAudio = concatenateMP3Buffers(audioBuffers);
     console.log('Combined audio bytes:', combinedAudio.byteLength);
 
-    // Return MP3 directly as binary
-    return new Response(combinedAudio, {
-      headers: { 
-        ...corsHeaders, 
-        'Content-Type': 'audio/mpeg'
-      },
-    });
+    // Return base64-encoded MP3 as JSON (easier for clients)
+    const base64Audio = uint8ToBase64(new Uint8Array(combinedAudio));
+    return new Response(
+      JSON.stringify({ audio: base64Audio }),
+      {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   } catch (error) {
     console.error('Error in text-to-speech function:', error);
     return new Response(
