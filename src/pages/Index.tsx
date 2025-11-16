@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Auth } from "@/components/Auth";
 import { Button } from "@/components/ui/button";
 import { Plus, LogOut, Sparkles } from "lucide-react";
-import { PodcastCard } from "@/components/PodcastCard";
+import { PodcastCarousel } from "@/components/PodcastCarousel";
 import { GeneratePodcastDialog } from "@/components/GeneratePodcastDialog";
 import { PodcastPlayer } from "@/components/PodcastPlayer";
 import { useToast } from "@/hooks/use-toast";
@@ -304,8 +304,8 @@ const Index = () => {
         </div>
 
         {podcasts.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="text-center py-20 animate-fade-in">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
               <Sparkles className="w-10 h-10 text-primary" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">No podcasts yet</h3>
@@ -314,31 +314,20 @@ const Index = () => {
             </p>
             <Button
               onClick={() => setGenerateDialogOpen(true)}
-              className="bg-primary hover:bg-primary/90 text-white"
+              className="bg-primary hover:bg-primary/90 text-white hover-scale"
             >
               <Plus className="w-4 h-4 mr-2" />
               Generate Your First Podcast
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {podcasts.map((podcast) => (
-              <PodcastCard
-                key={podcast.id}
-                id={podcast.id}
-                title={podcast.title}
-                description={podcast.description || undefined}
-                thumbnail_url={podcast.thumbnail_url || undefined}
-                duration={podcast.duration}
-                audio_url={podcast.audio_url || undefined}
-                topic={podcast.topic}
-                onPlay={() => handlePlayPodcast(podcast)}
-                onDelete={() => handleDeletePodcast(podcast.id)}
-                onGenerateAudio={() => handleGenerateAudio(podcast)}
-                onGenerateThumbnail={() => handleGenerateThumbnail(podcast)}
-              />
-            ))}
-          </div>
+          <PodcastCarousel
+            podcasts={podcasts}
+            onPlay={handlePlayPodcast}
+            onDelete={handleDeletePodcast}
+            onGenerateAudio={handleGenerateAudio}
+            onGenerateThumbnail={handleGenerateThumbnail}
+          />
         )}
       </section>
 
