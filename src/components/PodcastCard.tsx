@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Trash2, Volume2 } from "lucide-react";
+import { Play, Trash2, Volume2, Image } from "lucide-react";
 import { useState } from "react";
 
 interface PodcastCardProps {
@@ -10,9 +10,11 @@ interface PodcastCardProps {
   thumbnail_url?: string;
   duration: string;
   audio_url?: string;
+  topic: string;
   onPlay: () => void;
   onDelete: () => void;
   onGenerateAudio: () => void;
+  onGenerateThumbnail: () => void;
 }
 
 export const PodcastCard = ({
@@ -21,9 +23,11 @@ export const PodcastCard = ({
   thumbnail_url,
   duration,
   audio_url,
+  topic,
   onPlay,
   onDelete,
   onGenerateAudio,
+  onGenerateThumbnail,
 }: PodcastCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -67,8 +71,22 @@ export const PodcastCard = ({
                   e.stopPropagation();
                   onGenerateAudio();
                 }}
+                title="Generate Audio"
               >
                 <Volume2 className="w-5 h-5" />
+              </Button>
+            )}
+            {!thumbnail_url && (
+              <Button
+                size="icon"
+                className="bg-secondary hover:bg-secondary/90 text-white rounded-full w-10 h-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onGenerateThumbnail();
+                }}
+                title="Generate Thumbnail"
+              >
+                <Image className="w-5 h-5" />
               </Button>
             )}
             <Button

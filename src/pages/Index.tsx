@@ -77,6 +77,43 @@ const Index = () => {
     }
   };
 
+  const handleGenerateThumbnail = async (podcast: Podcast) => {
+    toast({
+      title: "Generating thumbnail...",
+      description: "Creating visual for your podcast",
+    });
+
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-thumbnail", {
+        body: { topic: podcast.topic, title: podcast.title },
+      });
+
+      if (error) throw error;
+
+      // Update podcast with thumbnail URL
+      const { error: updateError } = await supabase
+        .from("podcasts")
+        .update({ thumbnail_url: data.thumbnail_url })
+        .eq("id", podcast.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Thumbnail generated!",
+        description: "Your podcast thumbnail is ready",
+      });
+
+      loadPodcasts();
+    } catch (error) {
+      console.error("Error generating thumbnail:", error);
+      toast({
+        title: "Thumbnail generation failed",
+        description: error instanceof Error ? error.message : "Failed to generate thumbnail",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handlePlayPodcast = (podcast: Podcast) => {
     setSelectedPodcast(podcast);
     setPlayerOpen(true);
@@ -256,9 +293,11 @@ const Index = () => {
                 thumbnail_url={podcast.thumbnail_url || undefined}
                 duration={podcast.duration}
                 audio_url={podcast.audio_url || undefined}
+                topic={podcast.topic}
                 onPlay={() => handlePlayPodcast(podcast)}
                 onDelete={() => handleDeletePodcast(podcast.id)}
                 onGenerateAudio={() => handleGenerateAudio(podcast)}
+                onGenerateThumbnail={() => handleGenerateThumbnail(podcast)}
               />
             ))}
           </div>

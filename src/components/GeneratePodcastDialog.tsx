@@ -41,12 +41,27 @@ export const GeneratePodcastDialog = ({
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Not authenticated");
 
+      // Generate podcast script
       const { data, error } = await supabase.functions.invoke("generate-podcast", {
         body: { topic, duration, style },
       });
 
       if (error) throw error;
 
+      // Generate thumbnail in parallel
+      toast({
+        title: "Generating thumbnail...",
+        description: "Creating visual for your podcast",
+      });
+
+      const { data: thumbnailData, error: thumbnailError } = await supabase.functions.invoke(
+        "generate-thumbnail",
+        {
+          body: { topic, title: data.title },
+        }
+      );
+
+      // Insert podcast with thumbnail (if generation succeeded)
       const { error: insertError } = await supabase.from("podcasts").insert({
         user_id: userData.user.id,
         title: data.title,
@@ -54,6 +69,7 @@ export const GeneratePodcastDialog = ({
         topic,
         duration,
         script: data.script,
+        thumbnail_url: thumbnailError ? null : thumbnailData.thumbnail_url,
         status: "completed",
       });
 
