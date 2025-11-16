@@ -19,22 +19,34 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are an expert podcast script writer. Create engaging, conversational podcast scripts that:
-- Use natural dialogue and storytelling
-- Include interesting facts and examples
-- Keep listeners engaged throughout
-- Have a clear structure: introduction, main content, conclusion
+    const systemPrompt = `You are an expert podcast script writer. Create engaging, conversational podcast scripts with dialogue between a Host and an Interviewer.
+
+CRITICAL FORMATTING RULES:
+- Always use "Host:" and "Interviewer:" labels before each speaker's dialogue
+- Write ONLY the spoken words - no stage directions, no sound effects, no music cues
+- Never include text in parentheses like (pause), (laughs), (music fades)
+- Never use asterisks or formatting markers like **bold** or *italic*
+- Write natural, conversational dialogue that flows smoothly
 - Use a ${style} style/tone`;
 
     const userPrompt = `Write a ${duration} podcast script about: ${topic}
 
-Format the script as a narrative with natural breaks and transitions. Include:
-1. A captivating introduction that hooks the listener
-2. Main content with 3-4 key points or stories
-3. Interesting examples and anecdotes
-4. A memorable conclusion with key takeaways
+Format as a dialogue between Host and Interviewer with these rules:
+1. Start each line with "Host:" or "Interviewer:"
+2. Write ONLY spoken dialogue - no stage directions, parentheses, or formatting
+3. Include:
+   - Captivating introduction with both speakers
+   - 3-4 key points explored through conversation
+   - Natural back-and-forth dialogue
+   - Engaging questions and answers
+   - Memorable conclusion
 
-The script should sound natural when read aloud.`;
+Example format:
+Host: Welcome to today's episode where we explore [topic].
+Interviewer: Thanks for having me. This is such a fascinating subject.
+Host: Let's dive right in. What makes this so interesting?
+
+Remember: ONLY dialogue with speaker labels. No stage directions or formatting.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
