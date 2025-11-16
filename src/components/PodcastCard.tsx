@@ -67,7 +67,7 @@ export const PodcastCard = ({
             >
               <Play className="w-6 h-6" />
             </Button>
-            {!audio_url && (
+            {!audio_url || audio_url?.startsWith('blob:') ? (
               <Button
                 size="icon"
                 className="bg-accent hover:bg-accent/90 text-white rounded-full w-10 h-10"
@@ -75,11 +75,11 @@ export const PodcastCard = ({
                   e.stopPropagation();
                   onGenerateAudio();
                 }}
-                title="Generate Audio"
+                title={audio_url?.startsWith('blob:') ? "Regenerate Audio" : "Generate Audio"}
               >
                 <Volume2 className="w-5 h-5" />
               </Button>
-            )}
+            ) : null}
             {!thumbnail_url && (
               <Button
                 size="icon"

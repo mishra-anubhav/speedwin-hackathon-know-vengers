@@ -197,13 +197,18 @@ const Index = () => {
         }
       );
 
-      // Create video URL from blob
-      const videoUrl = URL.createObjectURL(videoBlob);
+      // Create video URL as data URL for persistence
+      const videoDataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(videoBlob);
+      });
 
       // Update podcast with video URL
       const { error: updateError } = await supabase
         .from("podcasts")
-        .update({ video_url: videoUrl })
+        .update({ video_url: videoDataUrl })
         .eq("id", podcast.id);
 
       if (updateError) throw updateError;
@@ -328,21 +333,22 @@ const Index = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {podcasts.map((podcast) => (
-              <PodcastCard
-                key={podcast.id}
-                id={podcast.id}
-                title={podcast.title}
-                description={podcast.description || undefined}
-                thumbnail_url={podcast.thumbnail_url || undefined}
-                duration={podcast.duration}
-                audio_url={podcast.audio_url || undefined}
-                topic={podcast.topic}
+                <PodcastCard
+                  key={podcast.id}
+                  id={podcast.id}
+                  title={podcast.title}
+                  description={podcast.description || undefined}
+                  thumbnail_url={podcast.thumbnail_url || undefined}
+                  duration={podcast.duration}
+                  audio_url={podcast.audio_url || undefined}
+                  video_url={podcast.video_url || undefined}
+                  topic={podcast.topic}
                   onPlay={() => handlePlayPodcast(podcast)}
                   onDelete={() => handleDeletePodcast(podcast.id)}
                   onGenerateAudio={() => handleGenerateAudio(podcast)}
                   onGenerateThumbnail={() => handleGenerateThumbnail(podcast)}
                   onGenerateVideo={() => handleGenerateVideo(podcast)}
-              />
+                />
             ))}
           </div>
         )}
@@ -359,6 +365,7 @@ const Index = () => {
         open={playerOpen}
         onOpenChange={setPlayerOpen}
         podcast={selectedPodcast}
+        onRegenerateAudio={() => selectedPodcast && handleGenerateAudio(selectedPodcast)}
       />
     </div>
   );
