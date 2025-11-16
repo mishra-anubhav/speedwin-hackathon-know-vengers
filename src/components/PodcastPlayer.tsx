@@ -18,14 +18,17 @@ interface PodcastPlayerProps {
 export const PodcastPlayer = ({ open, onOpenChange, podcast, onRegenerateAudio }: PodcastPlayerProps) => {
   if (!podcast) return null;
 
-  const isStaleBlob = typeof podcast.audio_url === 'string' && podcast.audio_url.startsWith('blob:');
-  const hasValidAudio = podcast.audio_url && !isStaleBlob;
+  const url = podcast.audio_url || '';
+  const isStaleBlob = url.startsWith('blob:');
+  const isInvalidData = url.startsWith('data:') && (url.endsWith(',undefined') || !url.includes(','));
+  const hasValidAudio = !!url && !isStaleBlob && !isInvalidData;
 
   console.log('PodcastPlayer audio check:', { 
     hasAudio: !!podcast.audio_url,
     isStaleBlob,
+    isInvalidData,
     hasValidAudio,
-    urlPrefix: podcast.audio_url?.substring(0, 50)
+    urlPrefix: url.substring(0, 50)
   });
 
   return (
