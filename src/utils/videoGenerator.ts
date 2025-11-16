@@ -5,7 +5,10 @@ export async function generateStaticVideo(
 ): Promise<Blob> {
   // Load the thumbnail image
   const img = new Image();
-  img.crossOrigin = "anonymous";
+  const isDataUrl = thumbnailUrl.startsWith('data:');
+  if (!isDataUrl) {
+    img.crossOrigin = "anonymous";
+  }
   
   await new Promise((resolve, reject) => {
     img.onload = resolve;
@@ -13,15 +16,38 @@ export async function generateStaticVideo(
     img.src = thumbnailUrl;
   });
 
-  // Prepare the audio element and wait for metadata (avoids fetching blob: URLs)
+  // Prepare the audio element and wait for metadata
   const audioElement = new Audio();
+  const isAudioDataUrl = audioUrl.startsWith('data:');
+  
+  // Don't set crossOrigin for data URLs
+  if (!isAudioDataUrl) {
+    audioElement.crossOrigin = "anonymous";
+  }
+  
   audioElement.src = audioUrl;
-  audioElement.crossOrigin = "anonymous";
+  
   await new Promise((resolve, reject) => {
-    audioElement.onloadedmetadata = () => resolve(null as unknown as void);
-    audioElement.onerror = () => reject(new Error('Unable to load audio'));
+    const timeout = setTimeout(() => {
+      reject(new Error('Audio loading timed out'));
+    }, 10000); // 10 second timeout
+    
+    audioElement.onloadedmetadata = () => {
+      clearTimeout(timeout);
+      resolve(null as unknown as void);
+    };
+    audioElement.onerror = (e) => {
+      clearTimeout(timeout);
+      console.error('Audio loading error:', e);
+      reject(new Error('Unable to load audio'));
+    };
   });
+  
   const duration = isFinite(audioElement.duration) ? audioElement.duration : 0;
+  
+  if (duration === 0) {
+    throw new Error('Audio duration is invalid or zero');
+  }
 
   // Create canvas for video frames
   const canvas = document.createElement('canvas');
