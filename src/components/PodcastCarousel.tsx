@@ -8,9 +8,9 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { Database } from "@/integrations/supabase/types";
+import Autoplay from "embla-carousel-autoplay";
 
 type Podcast = Database["public"]["Tables"]["podcasts"]["Row"];
 
@@ -30,6 +30,9 @@ export const PodcastCarousel = ({
   onGenerateThumbnail,
 }: PodcastCarouselProps) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const autoplayPlugin = useRef(
+    Autoplay({ delay: 4000, stopOnInteraction: true })
+  );
 
   return (
     <Carousel
@@ -37,12 +40,7 @@ export const PodcastCarousel = ({
         align: "start",
         loop: true,
       }}
-      plugins={[
-        Autoplay({
-          delay: 4000,
-          stopOnInteraction: true,
-        }),
-      ]}
+      plugins={[autoplayPlugin.current]}
       className="w-full"
     >
       <CarouselContent className="-ml-4">
