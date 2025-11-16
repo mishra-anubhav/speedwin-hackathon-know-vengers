@@ -87,6 +87,19 @@ function concatenateMP3Buffers(buffers: ArrayBuffer[]): Uint8Array {
   return result;
 }
 
+// Safe Uint8Array -> base64 without stack overflow
+function uint8ToBase64(bytes: Uint8Array): string {
+  const chunkSize = 0x8000; // 32KB
+  const parts: string[] = [];
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    let s = '';
+    for (let j = 0; j < chunk.length; j++) s += String.fromCharCode(chunk[j]);
+    parts.push(s);
+  }
+  return btoa(parts.join(''));
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -120,10 +133,8 @@ serve(async (req) => {
     // Concatenate all audio buffers
     const combinedAudio = concatenateMP3Buffers(audioBuffers);
 
-    // Convert to base64
-    const base64Audio = btoa(
-      String.fromCharCode(...combinedAudio)
-    );
+    // Convert to base64 safely
+    const base64Audio = uint8ToBase64(combinedAudio);
 
     return new Response(
       JSON.stringify({ audioContent: base64Audio }),
