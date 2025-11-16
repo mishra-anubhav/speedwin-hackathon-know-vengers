@@ -98,14 +98,26 @@ const Index = () => {
     });
 
     try {
-      const { data, error } = await supabase.functions.invoke("text-to-speech", {
-        body: { text: podcast.script, voice: "alloy" },
-      });
+      // Call edge function and get binary MP3 response
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text: podcast.script, voice: "alloy" }),
+        }
+      );
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
 
-      // Create blob from base64 audio
-      const audioBlob = await fetch(`data:audio/mp3;base64,${data.audioContent}`).then(r => r.blob());
+      // Create blob from binary MP3 response
+      const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
 
       // Update podcast with audio URL
