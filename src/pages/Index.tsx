@@ -9,6 +9,7 @@ import { PodcastPlayer } from "@/components/PodcastPlayer";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import heroBg from "@/assets/hero-bg.jpg";
+import { generateStaticVideo } from "@/utils/videoGenerator";
 
 type Podcast = Database["public"]["Tables"]["podcasts"]["Row"];
 
@@ -144,7 +145,7 @@ const Index = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ text: podcast.script, voice: "alloy" }),
+          body: JSON.stringify({ text: podcast.script }),
         }
       );
 
@@ -167,8 +168,45 @@ const Index = () => {
 
       toast({
         title: "Audio generated!",
-        description: "Your podcast audio is ready to play",
+        description: "Now generating video...",
       });
+
+      // Generate video if thumbnail exists
+      if (podcast.thumbnail_url) {
+        try {
+          toast({
+            title: "Generating video...",
+            description: "Combining thumbnail with audio",
+          });
+
+          const videoBlob = await generateStaticVideo(
+            podcast.thumbnail_url,
+            audioBlob
+          );
+          
+          const videoUrl = URL.createObjectURL(videoBlob);
+
+          // Update podcast with video URL
+          const { error: videoUpdateError } = await supabase
+            .from("podcasts")
+            .update({ video_url: videoUrl })
+            .eq("id", podcast.id);
+
+          if (videoUpdateError) throw videoUpdateError;
+
+          toast({
+            title: "Video generated!",
+            description: "Your podcast video is ready",
+          });
+        } catch (videoError) {
+          console.error("Error generating video:", videoError);
+          toast({
+            title: "Video generation failed",
+            description: "Audio is available, but video generation encountered an error",
+            variant: "destructive",
+          });
+        }
+      }
 
       loadPodcasts();
     } catch (error) {
