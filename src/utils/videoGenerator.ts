@@ -13,12 +13,15 @@ export async function generateStaticVideo(
     img.src = thumbnailUrl;
   });
 
-  // Load the audio
-  const audioContext = new AudioContext();
-  const audioResponse = await fetch(audioUrl);
-  const audioBuffer = await audioResponse.arrayBuffer();
-  const decodedAudio = await audioContext.decodeAudioData(audioBuffer);
-  const duration = decodedAudio.duration;
+  // Prepare the audio element and wait for metadata (avoids fetching blob: URLs)
+  const audioElement = new Audio();
+  audioElement.src = audioUrl;
+  audioElement.crossOrigin = "anonymous";
+  await new Promise((resolve, reject) => {
+    audioElement.onloadedmetadata = () => resolve(null as unknown as void);
+    audioElement.onerror = () => reject(new Error('Unable to load audio'));
+  });
+  const duration = isFinite(audioElement.duration) ? audioElement.duration : 0;
 
   // Create canvas for video frames
   const canvas = document.createElement('canvas');
@@ -37,11 +40,12 @@ export async function generateStaticVideo(
   // Create video stream from canvas
   const stream = canvas.captureStream(30); // 30 fps
   
-  // Add audio track
-  const audioElement = new Audio(audioUrl);
-  audioElement.crossOrigin = "anonymous";
-  const audioStream = (audioElement as any).captureStream();
-  stream.addTrack(audioStream.getAudioTracks()[0]);
+  // Add audio track from the already prepared element
+  const streamSource: any = (audioElement as any);
+  const audioStream = streamSource.captureStream ? streamSource.captureStream() : (streamSource.mozCaptureStream ? streamSource.mozCaptureStream() : null);
+  if (audioStream) {
+    stream.addTrack(audioStream.getAudioTracks()[0]);
+  }
 
   // Create MediaRecorder
   const chunks: Blob[] = [];
@@ -74,21 +78,22 @@ export async function generateStaticVideo(
     const startTime = Date.now();
     const progressInterval = setInterval(() => {
       const elapsed = (Date.now() - startTime) / 1000;
-      const progress = Math.min((elapsed / duration) * 100, 99);
+      const progress = duration > 0 ? Math.min((elapsed / duration) * 100, 99) : 0;
       onProgress?.(progress);
       
-      if (elapsed >= duration) {
+      if (duration > 0 && elapsed >= duration) {
         clearInterval(progressInterval);
       }
     }, 100);
 
-    // Stop recording after audio duration
+    // Stop recording after audio duration (fallback to 60s if unknown)
+    const stopAfterMs = (duration > 0 ? duration : 60) * 1000 + 500;
     setTimeout(() => {
       clearInterval(progressInterval);
       mediaRecorder.stop();
       audioElement.pause();
       stream.getTracks().forEach(track => track.stop());
       onProgress?.(100);
-    }, duration * 1000 + 500); // Add 500ms buffer
+    }, stopAfterMs);
   });
 }
