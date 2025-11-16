@@ -144,19 +144,37 @@ const Index = () => {
 
       if (error) throw error;
 
-      console.log('Audio generation response:', { 
-        hasAudio: !!data?.audio, 
-        audioLength: data?.audio?.length 
+      // Extract base64 from multiple possible response shapes
+      let base64Audio: string | undefined = undefined;
+      try {
+        if (typeof data === 'string') base64Audio = data;
+        else if (data?.audio) base64Audio = data.audio;
+        else if (data?.audioContent) base64Audio = data.audioContent;
+        else if (data instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(data);
+          let binary = '';
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          base64Audio = btoa(binary);
+        }
+      } catch (e) {
+        console.warn('Failed to parse audio payload shape:', e);
+      }
+
+      console.log('Audio generation response:', {
+        typeofData: typeof data,
+        hasAudio: !!base64Audio,
+        length: base64Audio?.length,
+        keys: data && typeof data === 'object' ? Object.keys(data) : null,
       });
 
-      if (!data?.audio) {
+      if (!base64Audio) {
         throw new Error('No audio data received from server');
       }
 
       // Store as data URL (base64) for persistence
-      const audioDataUrl = `data:audio/mpeg;base64,${data.audio}`;
+      const audioDataUrl = `data:audio/mpeg;base64,${base64Audio}`;
       
-      console.log('Created audio data URL, length:', audioDataUrl.length);
+      console.log('Created audio data URL, prefix:', audioDataUrl.substring(0, 40));
 
       // Update podcast with audio URL
       const { error: updateError } = await supabase
