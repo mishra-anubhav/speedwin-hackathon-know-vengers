@@ -131,43 +131,33 @@ const Index = () => {
 
     toast({
       title: "Generating audio...",
-      description: "This may take a moment",
+      description: "Converting script to speech",
     });
 
     try {
-      // Call edge function and get binary MP3 response
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: podcast.script, voice: "alloy" }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke("text-to-speech", {
+        body: {
+          text: podcast.script,
+          voice: "alloy",
+        },
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
+      if (error) throw error;
 
-      // Create blob from binary MP3 response
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+      // Store as data URL (base64) for persistence
+      const audioDataUrl = `data:audio/mpeg;base64,${data.audio}`;
 
       // Update podcast with audio URL
       const { error: updateError } = await supabase
         .from("podcasts")
-        .update({ audio_url: audioUrl })
+        .update({ audio_url: audioDataUrl })
         .eq("id", podcast.id);
 
       if (updateError) throw updateError;
 
       toast({
         title: "Audio generated!",
-        description: "Your podcast audio is ready to play",
+        description: "Your podcast audio is ready",
       });
 
       loadPodcasts();
@@ -176,6 +166,59 @@ const Index = () => {
       toast({
         title: "Audio generation failed",
         description: error instanceof Error ? error.message : "Failed to generate audio",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateVideo = async (podcast: Podcast) => {
+    if (!podcast.thumbnail_url || !podcast.audio_url) {
+      toast({
+        title: "Missing required content",
+        description: "Both thumbnail and audio are needed to generate video",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Generating video...",
+      description: "Creating static video from thumbnail and audio",
+    });
+
+    try {
+      const { generateStaticVideo } = await import("@/utils/videoGenerator");
+      
+      const videoBlob = await generateStaticVideo(
+        podcast.thumbnail_url,
+        podcast.audio_url,
+        (progress) => {
+          console.log(`Video generation progress: ${progress.toFixed(0)}%`);
+        }
+      );
+
+      // Create video URL from blob
+      const videoUrl = URL.createObjectURL(videoBlob);
+
+      // Update podcast with video URL
+      const { error: updateError } = await supabase
+        .from("podcasts")
+        .update({ video_url: videoUrl })
+        .eq("id", podcast.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Video generated!",
+        description: "Your podcast video is ready",
+      });
+
+      loadPodcasts();
+    } catch (error) {
+      console.error("Error generating video:", error);
+      toast({
+        title: "Video generation failed",
+        description: error instanceof Error ? error.message : "Failed to generate video",
         variant: "destructive",
       });
     }
@@ -294,10 +337,11 @@ const Index = () => {
                 duration={podcast.duration}
                 audio_url={podcast.audio_url || undefined}
                 topic={podcast.topic}
-                onPlay={() => handlePlayPodcast(podcast)}
-                onDelete={() => handleDeletePodcast(podcast.id)}
-                onGenerateAudio={() => handleGenerateAudio(podcast)}
-                onGenerateThumbnail={() => handleGenerateThumbnail(podcast)}
+                  onPlay={() => handlePlayPodcast(podcast)}
+                  onDelete={() => handleDeletePodcast(podcast.id)}
+                  onGenerateAudio={() => handleGenerateAudio(podcast)}
+                  onGenerateThumbnail={() => handleGenerateThumbnail(podcast)}
+                  onGenerateVideo={() => handleGenerateVideo(podcast)}
               />
             ))}
           </div>
