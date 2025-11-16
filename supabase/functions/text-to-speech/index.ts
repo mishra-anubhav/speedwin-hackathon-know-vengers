@@ -100,13 +100,67 @@ function uint8ToBase64(bytes: Uint8Array): string {
   return btoa(parts.join(''));
 }
 
+// Clean script text by removing stage directions and formatting
+function cleanScriptText(text: string): string {
+  return text
+    // Remove content in parentheses (stage directions)
+    .replace(/\([^)]*\)/g, '')
+    // Remove asterisks (formatting)
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    // Remove multiple spaces
+    .replace(/\s+/g, ' ')
+    // Remove empty lines
+    .replace(/^\s*[\r\n]/gm, '')
+    .trim();
+}
+
+// Parse script into segments with speaker info
+interface ScriptSegment {
+  speaker: 'host' | 'interviewer';
+  text: string;
+}
+
+function parseScript(text: string): ScriptSegment[] {
+  const segments: ScriptSegment[] = [];
+  const lines = text.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    
+    if (trimmed.toLowerCase().startsWith('host:')) {
+      segments.push({
+        speaker: 'host',
+        text: cleanScriptText(trimmed.substring(5).trim())
+      });
+    } else if (trimmed.toLowerCase().startsWith('interviewer:')) {
+      segments.push({
+        speaker: 'interviewer',
+        text: cleanScriptText(trimmed.substring(12).trim())
+      });
+    } else {
+      // If no label, treat as host
+      const cleaned = cleanScriptText(trimmed);
+      if (cleaned) {
+        segments.push({
+          speaker: 'host',
+          text: cleaned
+        });
+      }
+    }
+  }
+  
+  return segments;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { text, voice = "alloy" } = await req.json();
+    const { text } = await req.json();
     console.log('Generating speech for text length:', text?.length);
 
     if (!text) {
@@ -118,16 +172,30 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    // Split text into chunks if needed
-    const chunks = splitTextIntoChunks(text);
-    console.log(`Split into ${chunks.length} chunks`);
+    // Parse script into segments with speakers
+    const segments = parseScript(text);
+    console.log(`Parsed ${segments.length} dialogue segments`);
 
-    // Generate audio for each chunk
+    // Voice mapping
+    const voiceMap = {
+      host: 'alloy',
+      interviewer: 'nova'
+    };
+
+    // Generate audio for each segment
     const audioBuffers: ArrayBuffer[] = [];
-    for (let i = 0; i < chunks.length; i++) {
-      console.log(`Generating chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)`);
-      const audioBuffer = await generateAudioChunk(chunks[i], voice, OPENAI_API_KEY);
-      audioBuffers.push(audioBuffer);
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const voice = voiceMap[segment.speaker];
+      
+      console.log(`Generating audio for segment ${i + 1}/${segments.length} (${segment.speaker})`);
+      
+      // Split long segments into chunks
+      const chunks = splitTextIntoChunks(segment.text, 4000);
+      for (const chunk of chunks) {
+        const audioBuffer = await generateAudioChunk(chunk, voice, OPENAI_API_KEY);
+        audioBuffers.push(audioBuffer);
+      }
     }
 
     // Concatenate all audio buffers
