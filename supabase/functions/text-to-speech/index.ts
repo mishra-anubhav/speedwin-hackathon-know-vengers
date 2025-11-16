@@ -132,9 +132,11 @@ serve(async (req) => {
 
     // Concatenate all audio buffers
     const combinedAudio = concatenateMP3Buffers(audioBuffers);
+    console.log('Combined audio bytes:', combinedAudio.byteLength);
 
     // Convert to base64 safely
     const base64Audio = uint8ToBase64(combinedAudio);
+    console.log('Base64 length:', base64Audio.length);
 
     return new Response(
       JSON.stringify({ audioContent: base64Audio }),
